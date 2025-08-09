@@ -438,17 +438,70 @@ div.spinner div.bar12 {
             
             const loadingManager = new LoadingManager();
             
-            var renderer = new ThreeJS.WebGLRenderer({
-                canvas: canvas,
-                antialias: true,
-                alpha: true
-            });
+            // WebGL compatibility check and fallback for Firefox
+            function checkWebGLSupport() {
+                try {
+                    const testCanvas = document.createElement('canvas');
+                    const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+                    if (!gl) {
+                        throw new Error('WebGL not supported');
+                    }
+                    return true;
+                } catch (e) {
+                    console.warn('WebGL not available:', e);
+                    return false;
+                }
+            }
             
-            renderer.setPixelRatio(devicePixelRatio);
+            // Check WebGL support before creating renderer
+            if (!checkWebGLSupport()) {
+                loadingElement.innerHTML = '<div style="color: #ff6b6b; text-align: center;"><h3>WebGL Not Supported</h3><p>Your browser or graphics drivers don\'t support WebGL.<br>Try updating your browser or enabling hardware acceleration.</p></div>';
+                return;
+            }
+            
+            // Enhanced renderer creation with Firefox-specific fixes
+            let renderer;
+            try {
+                renderer = new ThreeJS.WebGLRenderer({
+                    canvas: canvas,
+                    antialias: true,
+                    alpha: true,
+                    preserveDrawingBuffer: false,
+                    powerPreference: 'high-performance',
+                    failIfMajorPerformanceCaveat: false
+                });
+            } catch (error) {
+                console.error('Failed to create WebGL renderer:', error);
+                try {
+                    // Fallback with reduced settings for Firefox
+                    renderer = new ThreeJS.WebGLRenderer({
+                        canvas: canvas,
+                        antialias: false,
+                        alpha: false,
+                        preserveDrawingBuffer: false,
+                        powerPreference: 'default'
+                    });
+                    console.log('Using fallback renderer settings');
+                } catch (fallbackError) {
+                    loadingElement.innerHTML = '<div style="color: #ff6b6b; text-align: center;"><h3>Renderer Error</h3><p>Failed to initialize 3D graphics.<br>Please try refreshing or use a different browser.</p></div>';
+                    return;
+                }
+            }
+            
+            renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = ThreeJS.PCFSoftShadowMap;
-            // Improve overall lighting quality
+            
+            // Firefox-optimized shadow settings
+            const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+            if (isFirefox) {
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = ThreeJS.BasicShadowMap;
+                console.log('Using Firefox-optimized settings');
+            } else {
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = ThreeJS.PCFSoftShadowMap;
+            }
+            
             renderer.toneMapping = ThreeJS.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.2;
 
