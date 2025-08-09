@@ -40,6 +40,13 @@
             min-width: 350px;
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
+            opacity: 0;
+            transition: all 500ms ease-in-out;
+        }
+
+        .info-panel.show {
+            opacity: 1;
+            transform: scale(0);
             animation: scale 500ms linear forwards;
         }
 
@@ -166,17 +173,29 @@
         }
         img {
             position: fixed;
-            bottom:20px;
-            left:30px;
             z-index: 1000;
             object-fit: cover;
             cursor: pointer;
-            height:100px;
-            width:100px;
             transform: scale(0);
             animation: scale 500ms linear forwards;
             transition: all 300ms ease-in-out;
             opacity: 0.5;
+        }
+
+        .nasa-image {
+             height:100px;
+            width:100px;
+            bottom:20px;
+            left: 30px;
+            height:90px;
+            width:90px;
+        }
+
+        .metrics-image {
+            bottom:25px;
+            left: 130px;
+            height:80px;
+            width:80px;
         }
 
         img:hover {
@@ -251,6 +270,7 @@
     </div>
 
     <img onclick="loadNasaPage()" src="./images/NASA_logo.svg.png" alt="Nasa Logo" class="nasa-image">
+    <img onclick="toggleMetrics()" src="./images/metrics.png" alt="Metrics" class="metrics-image">
 
     <!-- Import maps for Three.js modules -->
     <script type="importmap">
@@ -278,6 +298,26 @@
         function main() {
             const canvas = document.querySelector('.webgl');
             const loadingElement = document.getElementById('loading');
+            const infoPanel = document.querySelector('.info-panel');
+            
+            // Track loading states
+            const loadingStates = {
+                issData: false,
+                userLocation: false,
+                issLocation: false,
+                gltfModel: false
+            };
+            
+            function checkAllLoaded() {
+                const allLoaded = Object.values(loadingStates).every(state => state === true);
+                if (allLoaded) {
+                    // Hide loading screen and show info panel
+                    setTimeout(() => {
+                        loadingElement.classList.add('hidden');
+                        infoPanel.classList.add('show');
+                    }, 500);
+                }
+            }
             
             var renderer = new ThreeJS.WebGLRenderer({
                 canvas: canvas,
@@ -328,6 +368,10 @@
                             
                             // Update sun position now that we have location
                             updateSunPosition();
+                            
+                            // Mark user location as loaded
+                            loadingStates.userLocation = true;
+                            checkAllLoaded();
                         },
                         function(error) {
                             console.warn("Geolocation error:", error);
@@ -335,6 +379,10 @@
                             // Fallback to UTC-based calculation
                             userLatitude = 0;
                             userLongitude = 0;
+                            
+                            // Mark as loaded even if denied
+                            loadingStates.userLocation = true;
+                            checkAllLoaded();
                         }
                     );
                 } else {
@@ -342,6 +390,10 @@
                     document.getElementById("userLocation").innerHTML = "Not supported";
                     userLatitude = 0;
                     userLongitude = 0;
+                    
+                    // Mark as loaded even if not supported
+                    loadingStates.userLocation = true;
+                    checkAllLoaded();
                 }
             }
 
@@ -601,15 +653,19 @@
                     }
                 }, 50);
 
-                // Hide loading screen once model is loaded
-                setTimeout(() => {
-                    loadingElement.classList.add('hidden');
-                }, 1000);
+                // Mark GLTF model as loaded
+                loadingStates.gltfModel = true;
+                checkAllLoaded();
+                
             }, function(progress) {
                 console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
             }, function(error) {
                 console.error('Error loading GLTF model:', error);
                 loadingElement.innerHTML = '<div>Error loading 3D model</div><div style="font-size: 14px;">Please check file paths</div>';
+                
+                // Mark as loaded even if error occurred
+                loadingStates.gltfModel = true;
+                checkAllLoaded();
             });
 
             // Update marker and ISS position
@@ -664,6 +720,10 @@
                         
                         console.log(`ISS is over: ${locationName}, ${country}`);
                         
+                        // Mark ISS location as loaded
+                        loadingStates.issLocation = true;
+                        checkAllLoaded();
+                        
                         return {
                             location: locationName,
                             country: country,
@@ -674,11 +734,19 @@
                         // No location found (probably over ocean)
                         document.getElementById("issLocation").innerHTML = "Ocean/Remote Area";
                         document.getElementById("issCountry").innerHTML = "Int'l Waters";
+                        
+                        // Mark as loaded even if no location found
+                        loadingStates.issLocation = true;
+                        checkAllLoaded();
                     }
                 } catch (error) {
                     console.warn('Error getting ISS location:', error);
                     document.getElementById("issLocation").innerHTML = "Location Error";
                     document.getElementById("issCountry").innerHTML = "Unknown";
+                    
+                    // Mark as loaded even if error occurred
+                    loadingStates.issLocation = true;
+                    checkAllLoaded();
                 }
             }
 
@@ -703,6 +771,12 @@
                     // Get reverse geocoded location for ISS
                     await getISSLocation(latitude, longitude);
                     
+                    // Mark ISS data as loaded (only on first load)
+                    if (!loadingStates.issData) {
+                        loadingStates.issData = true;
+                        checkAllLoaded();
+                    }
+                    
                 } catch (error) {
                     console.error('Error fetching ISS data:', error);
                     document.getElementById("latitude").innerHTML = "Error";
@@ -712,6 +786,13 @@
                     document.getElementById("issLocation").innerHTML = "Error";
                     document.getElementById("issCountry").innerHTML = "Error";
                     document.getElementById("issLocalTime").innerHTML = "Error";
+                    
+                    // Mark as loaded even if error occurred
+                    if (!loadingStates.issData) {
+                        loadingStates.issData = true;
+                        loadingStates.issLocation = true; // Also mark location as loaded since it failed
+                        checkAllLoaded();
+                    }
                 }
             }
 
@@ -758,13 +839,16 @@
             
         } catch (error) {
             console.error('Error loading Three.js modules:', error);
-            document.getElementById('loading').innerHTML = '<div>Error loading 3D libraries</div><div style="font-size: 14px;">Please refresh the page</div>';
+            document.getElementById('loading').innerHTML = '<div>Error loading 3D libraries</div>';
         }
     </script>
     <script>
         function loadNasaPage () {
             window.location.href = 'https://www.nasa.gov/international-space-station/'
-            console.log('clicked!')
+        }
+
+        function toggleMetrics() {
+            document.getElementsByClassName("show").toggle()
         }
     </script>
   
