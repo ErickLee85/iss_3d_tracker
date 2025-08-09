@@ -407,24 +407,36 @@ div.spinner div.bar12 {
             const loadingElement = document.getElementById('loading');
             const infoPanel = document.querySelector('.info-panel');
             
-            // Track loading states
-            const loadingStates = {
-                issData: false,
-                userLocation: false,
-                issLocation: false,
-                gltfModel: false
-            };
-            
-            function checkAllLoaded() {
-                const allLoaded = Object.values(loadingStates).every(state => state === true);
-                if (allLoaded) {
-                    // Hide loading screen and show info panel
-                    setTimeout(() => {
-                        loadingElement.classList.add('hidden');
-                        infoPanel.classList.add('show');
-                    }, 500);
+            // Centralized Loading Manager
+            class LoadingManager {
+                constructor() {
+                    this.states = {
+                        issData: false,
+                        userLocation: false,
+                        issLocation: false,
+                        gltfModel: false
+                    };
+                }
+                
+                setLoaded(key) {
+                    if (this.states[key] !== undefined) {
+                        this.states[key] = true;
+                        this.checkComplete();
+                    }
+                }
+                
+                checkComplete() {
+                    const allLoaded = Object.values(this.states).every(state => state === true);
+                    if (allLoaded) {
+                        setTimeout(() => {
+                            loadingElement.classList.add('hidden');
+                            infoPanel.classList.add('show');
+                        }, 500);
+                    }
                 }
             }
+            
+            const loadingManager = new LoadingManager();
             
             var renderer = new ThreeJS.WebGLRenderer({
                 canvas: canvas,
@@ -473,23 +485,17 @@ div.spinner div.bar12 {
                             
                             console.log(`User location: ${userLatitude}, ${userLongitude} (${userTimezone})`);
                             
-                            // Update sun position now that we have location
                             updateSunPosition();
                             
-                            // Mark user location as loaded
-                            loadingStates.userLocation = true;
-                            checkAllLoaded();
+                            loadingManager.setLoaded('userLocation');
                         },
                         function(error) {
                             console.warn("Geolocation error:", error);
                             document.getElementById("userLocation").innerHTML = "Location denied";
-                            // Fallback to UTC-based calculation
                             userLatitude = 0;
                             userLongitude = 0;
                             
-                            // Mark as loaded even if denied
-                            loadingStates.userLocation = true;
-                            checkAllLoaded();
+                            loadingManager.setLoaded('userLocation');
                         }
                     );
                 } else {
@@ -498,9 +504,7 @@ div.spinner div.bar12 {
                     userLatitude = 0;
                     userLongitude = 0;
                     
-                    // Mark as loaded even if not supported
-                    loadingStates.userLocation = true;
-                    checkAllLoaded();
+                    loadingManager.setLoaded('userLocation');
                 }
             }
 
@@ -760,9 +764,7 @@ div.spinner div.bar12 {
                     }
                 }, 50);
 
-                // Mark GLTF model as loaded
-                loadingStates.gltfModel = true;
-                checkAllLoaded();
+                loadingManager.setLoaded('gltfModel');
                 
             }, function(progress) {
                 console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
@@ -770,9 +772,7 @@ div.spinner div.bar12 {
                 console.error('Error loading GLTF model:', error);
                 loadingElement.innerHTML = '<div>Error loading 3D model</div><div style="font-size: 14px;">Please check file paths</div>';
                 
-                // Mark as loaded even if error occurred
-                loadingStates.gltfModel = true;
-                checkAllLoaded();
+                loadingManager.setLoaded('gltfModel');
             });
 
             // Update marker and ISS position
@@ -827,9 +827,7 @@ div.spinner div.bar12 {
                         
                         console.log(`ISS is over: ${locationName}, ${country}`);
                         
-                        // Mark ISS location as loaded
-                        loadingStates.issLocation = true;
-                        checkAllLoaded();
+                        loadingManager.setLoaded('issLocation');
                         
                         return {
                             location: locationName,
@@ -838,22 +836,17 @@ div.spinner div.bar12 {
                             localTime: localTime
                         };
                     } else {
-                        // No location found (probably over ocean)
                         document.getElementById("issLocation").innerHTML = "Ocean/Remote Area";
                         document.getElementById("issCountry").innerHTML = "Int'l Waters";
                         
-                        // Mark as loaded even if no location found
-                        loadingStates.issLocation = true;
-                        checkAllLoaded();
+                        loadingManager.setLoaded('issLocation');
                     }
                 } catch (error) {
                     console.warn('Error getting ISS location:', error);
                     document.getElementById("issLocation").innerHTML = "Location Error";
                     document.getElementById("issCountry").innerHTML = "Unknown";
                     
-                    // Mark as loaded even if error occurred
-                    loadingStates.issLocation = true;
-                    checkAllLoaded();
+                    loadingManager.setLoaded('issLocation');
                 }
             }
 
@@ -875,14 +868,9 @@ div.spinner div.bar12 {
 
                     updateMarker(latitude, longitude);
                     
-                    // Get reverse geocoded location for ISS
                     await getISSLocation(latitude, longitude);
                     
-                    // Mark ISS data as loaded (only on first load)
-                    if (!loadingStates.issData) {
-                        loadingStates.issData = true;
-                        checkAllLoaded();
-                    }
+                    loadingManager.setLoaded('issData');
                     
                 } catch (error) {
                     console.error('Error fetching ISS data:', error);
@@ -894,12 +882,8 @@ div.spinner div.bar12 {
                     document.getElementById("issCountry").innerHTML = "Error";
                     document.getElementById("issLocalTime").innerHTML = "Error";
                     
-                    // Mark as loaded even if error occurred
-                    if (!loadingStates.issData) {
-                        loadingStates.issData = true;
-                        loadingStates.issLocation = true; // Also mark location as loaded since it failed
-                        checkAllLoaded();
-                    }
+                    loadingManager.setLoaded('issData');
+                    loadingManager.setLoaded('issLocation');
                 }
             }
 
