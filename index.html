@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISS 3D Tracker</title>
+    <script src="script.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .webgl {
+            position: fixed;
+            top: 0;
+            left: 0;
+            outline: none;
+            z-index: 1;
+        }
+
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(64, 64, 64, 0.2);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            z-index: 100;
+            min-width: 300px;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .info-panel h2 {
+            color: #00ff88;
+            margin-bottom: 15px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .info-item {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .info-label {
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .info-value {
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+        }
+
+        .controls-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(64, 64, 64, 0.2);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .controls-panel h3 {
+            color: #00ff88;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .controls-panel p {
+            color: #ccc;
+            font-size: 12px;
+            margin: 5px 0;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff88;
+            font-size: 24px;
+            z-index: 200;
+            text-align: center;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .iss-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #ff0000;
+            border-radius: 50%;
+            margin-left: 10px;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div>Loading ISS 3D Tracker...</div>
+        <div style="font-size: 14px; margin-top: 10px;">Fetching ISS position and loading 3D model</div>
+    </div>
+
+    <canvas class="webgl"></canvas>
+
+    <div class="info-panel">
+        <h2>🛰️ ISS Live Tracker <span class="iss-indicator"></span></h2>
+        <div class="info-item">
+            <span class="info-label">Latitude:</span>
+            <span class="info-value" id="latitude">Loading...</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Longitude:</span>
+            <span class="info-value" id="longitude">Loading...</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Altitude:</span>
+            <span class="info-value" id="altitude">Loading...</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Velocity:</span>
+            <span class="info-value" id="velocity">Loading...</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Local Time:</span>
+            <span class="info-value" id="localTime">Loading...</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Your Location:</span>
+            <span class="info-value" id="userLocation">Detecting...</span>
+        </div>
+        <div class="info-item" style="border-top: 1px solid #444; margin-top: 10px; padding-top: 10px;">
+            <span class="info-label">ISS Over:</span>
+            <span class="info-value" id="issLocation">Loading...</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Country:</span>
+            <span class="info-value" id="issCountry">Loading...</span>
+        </div>
+    </div>
+
+    <div class="controls-panel">
+        <h3>🎮 Controls</h3>
+        <p>🖱️ Mouse: Orbit around Earth</p>
+        <p>🔍 Scroll: Zoom in/out</p>
+        <p>🔴 Red marker: ISS position</p>
+        <p>🌍 Earth rotates in real-time</p>
+        <p>☀️ Sun position based on your location</p>
+        <p>📍 Location auto-detected for accuracy</p>
+    </div>
+
+    <!-- Import maps for Three.js modules -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+                "OrbitControls": "https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js",
+                "GLTFLoader": "https://unpkg.com/three@0.158.0/examples/jsm/loaders/GLTFLoader.js"
+            }
+        }
+    </script>
+
+    <!-- Main application script -->
+    <script type="module">
+        try {
+            const THREE = await import('three');
+            const { OrbitControls } = await import('OrbitControls');
+            const { GLTFLoader } = await import('GLTFLoader');
+            
+            // Use default exports if available
+            const ThreeJS = THREE.default || THREE;
+            const OrbitControlsClass = OrbitControls.default || OrbitControls;
+            const GLTFLoaderClass = GLTFLoader.default || GLTFLoader;
+
+        function main() {
+            const canvas = document.querySelector('.webgl');
+            const loadingElement = document.getElementById('loading');
+            
+            var renderer = new ThreeJS.WebGLRenderer({
+                canvas: canvas,
+                antialias: true,
+                alpha: true
+            });
+            
+            renderer.setPixelRatio(devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = ThreeJS.PCFSoftShadowMap;
+            // Improve overall lighting quality
+            renderer.toneMapping = ThreeJS.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+
+            const fov = 45;
+            const near = 0.01;
+            const far = 1000;
+            const camera = new ThreeJS.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, near, far);
+            camera.position.z = 100;
+
+            const scene = new ThreeJS.Scene();
+
+            // Lighting setup
+            var ambientLight = new ThreeJS.AmbientLight(0x404040, 0.25); // Increased ambient for softer shadows
+            scene.add(ambientLight);
+
+            // Global variables for user location
+            let userLatitude = null;
+            let userLongitude = null;
+            let userTimezone = null;
+
+            // Get user's location
+            function getUserLocation() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                            userLatitude = position.coords.latitude;
+                            userLongitude = position.coords.longitude;
+                            
+                            // Get timezone information
+                            userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                            
+                            document.getElementById("userLocation").innerHTML = 
+                                `${userLatitude.toFixed(0)}°, ${userLongitude.toFixed(0)}°`;
+                            
+                            console.log(`User location: ${userLatitude}, ${userLongitude} (${userTimezone})`);
+                            
+                            // Update sun position now that we have location
+                            updateSunPosition();
+                        },
+                        function(error) {
+                            console.warn("Geolocation error:", error);
+                            document.getElementById("userLocation").innerHTML = "Location denied";
+                            // Fallback to UTC-based calculation
+                            userLatitude = 0;
+                            userLongitude = 0;
+                        }
+                    );
+                } else {
+                    console.warn("Geolocation not supported");
+                    document.getElementById("userLocation").innerHTML = "Not supported";
+                    userLatitude = 0;
+                    userLongitude = 0;
+                }
+            }
+
+            // Calculate accurate sun position based on current date and time
+            function calculateSunPosition() {
+                const now = new Date();
+                
+                // Calculate day of year
+                const start = new Date(now.getFullYear(), 0, 0);
+                const diff = now - start;
+                const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+                
+                // Solar declination (Earth's tilt effect)
+                const declination = 23.45 * Math.sin((360 / 365) * (dayOfYear - 81) * Math.PI / 180);
+                
+                // Calculate equation of time (Earth's orbital eccentricity effect)
+                const B = (360 / 365) * (dayOfYear - 81) * Math.PI / 180;
+                const equationOfTime = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+                
+                // UTC time for global sun position (not local time)
+                const utcTime = now.getUTCHours() + now.getUTCMinutes() / 60;
+                
+                // Hour angle from solar noon UTC (global sun position)
+                const hourAngle = 15 * (utcTime - 12);
+                
+                // Convert to 3D coordinates for global lighting
+                const sunDistance = 400;
+                
+                // Global sun position (not relative to user location)
+                const declinationRad = declination * Math.PI / 180;
+                const hourAngleRad = hourAngle * Math.PI / 180;
+                
+                // Position sun based on Earth's rotation and tilt
+                const x = sunDistance * Math.cos(declinationRad) * Math.cos(hourAngleRad);
+                const y = sunDistance * Math.sin(declinationRad);
+                const z = sunDistance * Math.cos(declinationRad) * Math.sin(hourAngleRad);
+                
+                // Calculate local solar information for user's location
+                let localSolarTime = 0;
+                let userElevation = 0;
+                if (userLatitude !== null && userLongitude !== null) {
+                    const timeCorrection = equationOfTime + 4 * userLongitude;
+                    const localTime = now.getHours() + now.getMinutes() / 60;
+                    localSolarTime = localTime + timeCorrection / 60;
+                    
+                    // Calculate sun elevation at user's location
+                    const userLatRad = userLatitude * Math.PI / 180;
+                    const localHourAngle = 15 * (localSolarTime - 12) * Math.PI / 180;
+                    
+                    userElevation = Math.asin(
+                        Math.sin(declinationRad) * Math.sin(userLatRad) +
+                        Math.cos(declinationRad) * Math.cos(userLatRad) * Math.cos(localHourAngle)
+                    ) * 180 / Math.PI;
+                }
+                
+                
+                return { 
+                    x, y, z, 
+                    declination, 
+                    hourAngle,
+                    localSolarTime,
+                    userElevation
+                };
+            }
+
+            // Create sun light
+            var sunLight = new ThreeJS.DirectionalLight(0xffffff, 1.0);
+            // Initialize with default position (will be updated when location is obtained)
+            sunLight.position.set(400, 0, 0);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 0.1;
+            sunLight.shadow.camera.far = 1000;
+            sunLight.shadow.camera.left = -100;
+            sunLight.shadow.camera.right = 100;
+            sunLight.shadow.camera.top = 100;
+            sunLight.shadow.camera.bottom = -100;
+            sunLight.shadow.radius = 8;
+            sunLight.shadow.blurSamples = 25;
+            scene.add(sunLight);
+
+            // Add subtle moonlight/starlight for the night side
+            var nightLight = new ThreeJS.AmbientLight(0x2a2a3e, 0.15);
+            scene.add(nightLight);
+
+            // Sun representation
+            var sunSphere = new ThreeJS.Mesh(
+                new ThreeJS.SphereGeometry(2, 16, 16),
+                new ThreeJS.MeshBasicMaterial({ 
+                    color: 0xffff00,
+                    emissive: 0xffff00,
+                    emissiveIntensity: 0.3
+                })
+            );
+            sunSphere.position.copy(sunLight.position);
+            scene.add(sunSphere);
+
+            // Function to update sun position in real-time
+            function updateSunPosition() {
+                const newSunPosition = calculateSunPosition();
+                sunLight.position.set(newSunPosition.x, newSunPosition.y, newSunPosition.z);
+                sunSphere.position.copy(sunLight.position);
+                
+                // Always keep sun intensity strong for global lighting
+                sunLight.intensity = 1.2;
+                
+                if (userLatitude !== null && userLongitude !== null) {
+                    console.log(`Global Sun Position - Declination: ${newSunPosition.declination.toFixed(1)}°, Hour Angle: ${newSunPosition.hourAngle.toFixed(1)}°`);
+                    console.log(`Your local sun elevation: ${newSunPosition.userElevation.toFixed(1)}°`);
+                    
+                    // Show if it's day or night at user's location
+                    const isDayAtUserLocation = newSunPosition.userElevation > 0;
+                    console.log(`At your location: ${isDayAtUserLocation ? 'Daytime' : 'Nighttime'}`);
+                }
+            }
+
+            // Camera controls
+            const controls = new OrbitControlsClass(camera, canvas);
+            controls.enableDamping = true;
+            controls.enablePan = false;
+            controls.minDistance = 30;
+            controls.maxDistance = 200;
+
+            // Load textures
+            // 8k_earth_nightmap.jpg
+            const textureLoader = new ThreeJS.TextureLoader();
+            const earthTexture = textureLoader.load('./images/8k_earth_daymap.webp');
+            const earthBump = textureLoader.load('./images/elev_bump_16k.jpg');
+            const earthSpec = textureLoader.load('./images/2k_earth_specular_map (1).jpg');
+            const earthAtmosphere = textureLoader.load('./images/2k_earth_clouds.jpg');
+            const starGlobe = textureLoader.load('./images/galaxy_starfield.png');
+
+            // Starfield background - Multiple options available
+            
+            // OPTION 1: Tone down current starfield with opacity
+            var setGlobe = new ThreeJS.Mesh(
+                new ThreeJS.SphereGeometry(500, 40, 20),
+                new ThreeJS.MeshBasicMaterial({
+                    map: starGlobe,
+                    side: ThreeJS.DoubleSide,
+                    transparent: true,
+                    opacity: 0.6, // Reduce opacity to tone down stars
+                    color: 0x888888 // Darken the texture
+                })
+            );
+            scene.add(setGlobe);
+
+            // OPTION 2: Alternative - Use scene.background (uncomment to use instead)
+            // scene.background = starGlobe;
+            
+            // OPTION 3: Alternative - Simple gradient background (uncomment to use instead)
+            // scene.background = new ThreeJS.Color(0x000511); // Dark space blue
+            
+            // OPTION 4: Alternative - Subtle star points instead of texture (uncomment to use instead)
+            /*
+            const starsGeometry = new ThreeJS.BufferGeometry();
+            const starsMaterial = new ThreeJS.PointsMaterial({
+                color: 0xffffff,
+                size: 0.5,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const starsVertices = [];
+            for (let i = 0; i < 1000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starsVertices.push(x, y, z);
+            }
+            
+            starsGeometry.setAttribute('position', new ThreeJS.Float32BufferAttribute(starsVertices, 3));
+            const starField = new ThreeJS.Points(starsGeometry, starsMaterial);
+            scene.add(starField);
+            */
+
+            // Earth
+            var mySphere = new ThreeJS.Mesh(
+                new ThreeJS.SphereGeometry(20, 100, 100),
+                new ThreeJS.MeshPhongMaterial({
+                    map: earthTexture,
+                    bumpMap: earthBump,
+                    bumpScale: 0.8,
+                    specularMap: earthSpec,
+                    shininess: 100,
+                    transparent: false,
+                    // Enhanced lighting response
+                    emissive: 0x000000, // No self-illumination
+                    emissiveIntensity: 0.0
+                })
+            );
+            mySphere.receiveShadow = true;
+            mySphere.castShadow = false;
+            scene.add(mySphere);
+
+            // Earth atmosphere
+            var sphereAtmosphere = new ThreeJS.Mesh(
+                new ThreeJS.SphereGeometry(20.2, 100, 100),
+                new ThreeJS.MeshBasicMaterial({
+                    map: earthAtmosphere,
+                    transparent: true,
+                    opacity: 0.4,
+                    blending: ThreeJS.AdditiveBlending
+                })
+            );
+            scene.add(sphereAtmosphere);
+
+            // Convert lat/long to 3D coordinates
+            const radius = 25;
+            const latLongToVector3 = (lat, lon, radius) => {
+                var phi = (90 - lat) * (Math.PI / 180);
+                var theta = (lon + 180) * (Math.PI / 180);
+
+                var x = -((radius) * Math.sin(phi) * Math.cos(theta));
+                var z = ((radius) * Math.sin(phi) * Math.sin(theta));
+                var y = ((radius) * Math.cos(phi));
+
+                return new ThreeJS.Vector3(x, y, z);
+            };
+
+            // ISS marker
+            var marker = new ThreeJS.Mesh(
+                new ThreeJS.SphereGeometry(0.5, 40, 20),
+                new ThreeJS.MeshBasicMaterial({
+                    color: 0xff0000,
+                })
+            );
+            marker.name = "ISS";
+            scene.add(marker);
+
+            // Blinking marker effect
+            var blinkMarker = scene.getObjectByName("ISS");
+            blinkMarker.visible = true;
+            function toggleBlinker() {
+                blinkMarker.visible = !blinkMarker.visible;
+            }
+            setInterval(toggleBlinker, 500);
+
+            // Load 3D ISS model
+            let obj;
+            const loader = new GLTFLoaderClass();
+
+            loader.load('./3december_2021_-_international_space_station/scene.gltf', function(gltf) {
+                obj = gltf.scene;
+                obj.rotation.y = 0;
+                obj.scale.set(0.06, 0.06, 0.06);
+                obj.castShadow = true;
+                scene.add(obj);
+                camera.lookAt(obj.position);
+                
+                // Rotate ISS model
+                setInterval(() => {
+                    if (obj) {
+                        obj.rotation.x += 0.005;
+                        obj.rotation.y += 0.005;
+                    }
+                }, 50);
+
+                // Hide loading screen once model is loaded
+                setTimeout(() => {
+                    loadingElement.classList.add('hidden');
+                }, 1000);
+            }, function(progress) {
+                console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
+            }, function(error) {
+                console.error('Error loading GLTF model:', error);
+                loadingElement.innerHTML = '<div>Error loading 3D model</div><div style="font-size: 14px;">Please check file paths</div>';
+            });
+
+            // Update marker and ISS position
+            const updateMarker = (lat, lon) => {
+                const position = latLongToVector3(lat, lon, radius);
+
+                marker.position.copy(position);
+                if (obj) {
+                    obj.position.copy(position);
+                }
+            };
+
+            // Update local time display
+            function updateLocalTime() {
+                const now = new Date();
+                document.getElementById("localTime").innerHTML = now.toLocaleTimeString();
+            }
+
+            // Reverse geocoding function for ISS location
+            async function getISSLocation(lat, lon) {
+                const apiKey = 'f7ebedf3b11a474b8a45dc33245eb548'; // Your Geoapify API key
+                const req = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lon}&apiKey=${apiKey}`;
+                
+                try {
+                    const locationResponse = await fetch(req, { method: 'GET' });
+                    const locationData = await locationResponse.json();
+                    
+                    if (locationData.features && locationData.features.length > 0) {
+                        const feature = locationData.features[0].properties;
+                        
+                        // Extract location information
+                        const locationName = feature.name || feature.city || feature.state || 'Ocean/Remote Area';
+                        const country = feature.country || 'Intl Waters';
+                        const timezone = feature.timezone ? feature.timezone.name : null;
+                        const offset = feature.timezone ? feature.timezone.offset_STD : null;
+                        
+                        // Calculate local time at ISS location if timezone is available
+                        let localTime = 'Unknown';
+                        if (timezone && offset !== null) {
+                            const now = new Date();
+                            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+                            const localDateTime = new Date(utc + (offset * 3600000));
+                            localTime = localDateTime.toLocaleTimeString();
+                        }
+                        // Update UI elements
+                        document.getElementById("issLocation").innerHTML = locationName
+                        document.getElementById("issCountry").innerHTML = country;
+                        
+                        console.log(`ISS is over: ${locationName}, ${country}`);
+                        
+                        return {
+                            location: locationName,
+                            country: country,
+                            timezone: timezone,
+                            localTime: localTime
+                        };
+                    } else {
+                        // No location found (probably over ocean)
+                        document.getElementById("issLocation").innerHTML = "Ocean/Remote Area";
+                        document.getElementById("issCountry").innerHTML = "Int'l Waters";
+                    }
+                } catch (error) {
+                    console.warn('Error getting ISS location:', error);
+                    document.getElementById("issLocation").innerHTML = "Location Error";
+                    document.getElementById("issCountry").innerHTML = "Unknown";
+                }
+            }
+
+            // Fetch ISS data
+            async function updateISS() {
+                try {
+                    const issResponse = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+                    const issData = await issResponse.json();
+
+                    const latitude = issData.latitude;
+                    const longitude = issData.longitude;
+                    const altitude = Math.floor(issData.altitude * 0.621371);
+                    const velocity = Math.floor(issData.velocity * 0.621371);
+
+                    document.getElementById("latitude").innerHTML = latitude.toFixed(4) + "°";
+                    document.getElementById("longitude").innerHTML = longitude.toFixed(4) + "°";
+                    document.getElementById("altitude").innerText = altitude + " miles";
+                    document.getElementById('velocity').innerText = velocity + " mph";
+
+                    updateMarker(latitude, longitude);
+                    
+                    // Get reverse geocoded location for ISS
+                    await getISSLocation(latitude, longitude);
+                    
+                } catch (error) {
+                    console.error('Error fetching ISS data:', error);
+                    document.getElementById("latitude").innerHTML = "Error";
+                    document.getElementById("longitude").innerHTML = "Error";
+                    document.getElementById("altitude").innerHTML = "Error";
+                    document.getElementById('velocity').innerHTML = "Error";
+                    document.getElementById("issLocation").innerHTML = "Error";
+                    document.getElementById("issCountry").innerHTML = "Error";
+                    document.getElementById("issLocalTime").innerHTML = "Error";
+                }
+            }
+
+            // Initial updates
+            updateISS();
+            updateLocalTime();
+            getUserLocation(); // Get user's location for accurate sun positioning
+
+            // Update intervals
+            setInterval(updateISS, 5000);
+            setInterval(updateLocalTime, 1000);
+            // Update sun position every minute for more accuracy
+            setInterval(updateSunPosition, 60000);
+
+            // Render loop
+            function render() {
+                // Rotate atmosphere slightly
+                sphereAtmosphere.rotation.y += 0.0001;
+                
+                // Rotate Earth slowly to simulate Earth's rotation (24 hour cycle)
+                // Earth rotates 360° in 24 hours = 0.25° per minute = ~0.004° per second
+                mySphere.rotation.y += 0.00007; // Adjust this value for desired speed
+                
+                // Update controls
+                controls.update();
+                
+                renderer.render(scene, camera);
+                requestAnimationFrame(render);
+            }
+
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Start render loop
+            requestAnimationFrame(render);
+        }
+
+            // Initialize when page loads
+            main();
+            
+        } catch (error) {
+            console.error('Error loading Three.js modules:', error);
+            document.getElementById('loading').innerHTML = '<div>Error loading 3D libraries</div><div style="font-size: 14px;">Please refresh the page</div>';
+        }
+    </script>
+</body>
+</html>
