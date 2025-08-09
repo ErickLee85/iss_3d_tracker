@@ -40,13 +40,16 @@
             min-width: 300px;
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
+            animation: scale 400ms linear forwards;
         }
 
         .info-panel h2 {
             color: #00ff88;
             margin-bottom: 15px;
             font-size: 18px;
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .info-item {
@@ -63,6 +66,7 @@
         .info-label {
             color: #ffffff;
             font-weight: bold;
+            letter-spacing: 1px;
         }
 
         .info-value {
@@ -82,6 +86,7 @@
             z-index: 100;
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
+            animation: scale 400ms linear forwards;
         }
 
         .controls-panel h3 {
@@ -97,18 +102,22 @@
         }
 
         .loading {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            position:fixed;
+            top:0;
+            left:0;
+            min-height:100%;
+            min-width: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
             color: #00ff88;
             font-size: 24px;
             z-index: 200;
-            text-align: center;
         }
 
         .loading.hidden {
-            display: none;
+           animation: loadingDone 500ms linear forwards;
         }
 
         .iss-indicator {
@@ -126,18 +135,35 @@
             50% { opacity: 0.3; }
             100% { opacity: 1; }
         }
+
+        @keyframes scale {
+           0% { transform: scale(0.0);}
+           50% {transform: scale(0.5);}
+           75% {transform: scale(1.3);}
+           100% {transform: scale(1.0);}
+        }
+
+        @keyframes loadingDone {
+            from {
+                opacity: 1;
+            } to {
+                opacity: 0;
+            }
+        }
+        
     </style>
 </head>
 <body>
     <div class="loading" id="loading">
-        <div>Loading ISS 3D Tracker...</div>
-        <div style="font-size: 14px; margin-top: 10px;">Fetching ISS position and loading 3D model</div>
+        <div>
+            Fetching Data...
+        </div>
     </div>
 
     <canvas class="webgl"></canvas>
 
     <div class="info-panel">
-        <h2>🛰️ ISS Live Tracker <span class="iss-indicator"></span></h2>
+        <h2>ISS Live Tracker <span class="iss-indicator"></span></h2>
         <div class="info-item">
             <span class="info-label">Latitude:</span>
             <span class="info-value" id="latitude">Loading...</span>
@@ -176,7 +202,7 @@
         </div>
     </div>
 
-    <div class="controls-panel">
+    <!-- <div class="controls-panel">
         <h3>🎮 Controls</h3>
         <p>🖱️ Mouse: Orbit around Earth</p>
         <p>🔍 Scroll: Zoom in/out</p>
@@ -184,7 +210,7 @@
         <p>🌍 Earth rotates in real-time</p>
         <p>☀️ Sun position based on your location</p>
         <p>📍 Location auto-detected for accuracy</p>
-    </div>
+    </div> -->
 
     <!-- Import maps for Three.js modules -->
     <script type="importmap">
@@ -198,7 +224,7 @@
     </script>
 
     <!-- Main application script -->
-    <script type="module">
+       <script type="module">
         try {
             const THREE = await import('three');
             const { OrbitControls } = await import('OrbitControls');
@@ -372,7 +398,7 @@
                 })
             );
             sunSphere.position.copy(sunLight.position);
-            scene.add(sunSphere);
+            // scene.add(sunSphere);
 
             // Function to update sun position in real-time
             function updateSunPosition() {
@@ -407,7 +433,7 @@
             const earthBump = textureLoader.load('./images/elev_bump_16k.jpg');
             const earthSpec = textureLoader.load('./images/2k_earth_specular_map (1).jpg');
             const earthAtmosphere = textureLoader.load('./images/2k_earth_clouds.jpg');
-            const starGlobe = textureLoader.load('./images/galaxy_starfield.png');
+            const starGlobe = textureLoader.load('./images/8k_stars_milky_way.jpg');
 
             // Starfield background - Multiple options available
             
@@ -422,10 +448,10 @@
                     color: 0x888888 // Darken the texture
                 })
             );
-            scene.add(setGlobe);
+            // scene.add(setGlobe);
 
             // OPTION 2: Alternative - Use scene.background (uncomment to use instead)
-            // scene.background = starGlobe;
+            scene.background = starGlobe;
             
             // OPTION 3: Alternative - Simple gradient background (uncomment to use instead)
             // scene.background = new ThreeJS.Color(0x000511); // Dark space blue
@@ -692,5 +718,6 @@
             document.getElementById('loading').innerHTML = '<div>Error loading 3D libraries</div><div style="font-size: 14px;">Please refresh the page</div>';
         }
     </script>
+  
 </body>
 </html>
