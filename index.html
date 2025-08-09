@@ -45,15 +45,17 @@
 
         .info-panel h2 {
             color: #00ff88;
-            border: 1px solid #00ff88;
+            border: 2px solid #00ff88;
             margin-bottom: 15px;
             font-size: 15px;
             padding:15px;
-            border-radius: 5px;
+            border-radius: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: linear-gradient(to right, rgba(0, 255, 136, 0.3),rgba(0, 255, 136, 0.1))
+            background: linear-gradient(to right, rgba(0, 255, 136, 0.3),rgba(0, 255, 136, 0.1));
+            font-weight: 900;
+            text-transform: uppercase;
             
         }
 
@@ -77,7 +79,7 @@
         }
 
         .info-value {
-            color: #00ff88;
+            color: #00c66a;
             font-family: 'Courier New', monospace;
         }
 
@@ -136,6 +138,7 @@
             border-radius: 50%;
             margin-left: 10px;
             animation: pulse 1s infinite;
+            box-shadow: 0px 0px 1px 1px #fe00001a;
         }
 
         @keyframes pulse {
@@ -172,7 +175,26 @@
             width:100px;
             transform: scale(0);
             animation: scale 500ms linear forwards;
+            transition: all 300ms ease-in-out;
+            opacity: 0.5;
         }
+
+        img:hover {
+            opacity: 1;
+        }
+        .pulse {
+            animation: pulse-animation 2s infinite;
+            margin-right: 5px;
+            }
+
+            @keyframes pulse-animation {
+            0% {
+                box-shadow: 0 0 0 0px rgba(255, 0, 0, 0.5);
+            }
+            100% {
+                box-shadow: 0 0 0 20px rgba(255, 0, 0, 0);
+            }
+            }
     </style>
 </head>
 <body>
@@ -185,7 +207,7 @@
     <canvas class="webgl"></canvas>
 
     <div class="info-panel">
-        <h2>ISS Live Tracker <span class="iss-indicator"></span></h2>
+        <h2>ISS Live Tracker <span class="iss-indicator pulse"></span></h2>
         <div class="info-item">
             <span class="info-label">Latitude:</span>
             <span class="info-value" id="latitude">Loading...</span>
@@ -219,7 +241,7 @@
             <span class="info-value" id="issCountry">Loading...</span>
         </div>
         <div class="info-item">
-            <span class="info-label">TimeZone:</span>
+            <span class="info-label">Time Zone:</span>
             <span class="info-value" id="issTZ">Loading...</span>
         </div>
         <div class="info-item">
@@ -622,7 +644,7 @@
                         
                         // Extract location information
                         const locationName = feature.name || feature.city || feature.state || 'Ocean/Remote Area';
-                        const country = feature.country || 'Intl Waters';
+                        const country = feature.country || `Int'l Waters`;
                         const timezone = feature.timezone ? feature.timezone.name : null;
                         const offset = feature.timezone ? feature.timezone.offset_STD : null;
                         
