@@ -2,7 +2,6 @@
 const iss_api = 'http://api.open-notify.org/iss-now.json'
 const apiKey = 'f7ebedf3b11a474b8a45dc33245eb548'
 const nasaApiKey = 'fbIUMAB6ztsFdSfkMsbR5cBDvBbWDSNLcfxaL2UD'
-const infoPanel = document.querySelector('.info-panel')
 let lat;
 let long;
 
