@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <style>
+
+        .astro-panel {
+            background: rgba(64, 64, 64, 0.5);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            z-index: 100;
+            min-width: 350px;
+            max-width:350px;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            opacity: 1;
+            transition: all 500ms ease-in-out;
+            position:relative;
+            margin-top: 100px;
+        }
+
+        .astro-panel h2 {
+            color: #00ff88;
+            margin-bottom: 15px;
+            font-size: 15px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .title {
+            border: 2px solid #00ff88;
+            padding:15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to right, rgba(0, 255, 136, 0.3),rgba(0, 255, 136, 0.1));
+            margin-bottom: 25px;
+        }
+
+        .info-label {
+            font-weight: 800;
+            font-size:1.2rem;
+            padding:5px;
+        }
+
+        .info-item{
+            display:flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .line {
+             flex-grow: 1;
+             border-bottom: 1px dashed rgb(255, 255, 255);
+             margin-top: 10px;
+             margin-inline: 10px;
+        }
+        .astro-img {
+    height:50px;
+    width:50px;
+    border-radius:50%;
+    transition: transform 300ms ease-in-out;
+}
+
+.astro-img:hover {
+    transform: translateY(-2px) scale(1.05);
+}
+
+
+.astro-svg {
+    height:125px;
+    width:125px;
+    object-fit: contain;
+    position: absolute;
+    z-index: 1000;
+    top:-50px;
+    right:0px;
+}
+
+    </style>
+    <div class="astro-panel">
+        <div class="title">
+            <h2>Current Astronauts</h2>
+        <img src="./images/cute-astronaut-peace-hand-cartoon-vector-icon-illustration-science-technology-icon-isolated-flat.png" alt="astronaut svg" class="astro-svg">
+        </div>
+        <div class="info-item">
+            <span class="info-label">Zena Cardman</span>
+            <div class="line"></div>
+            <img src="./images/Cardman.webp" alt="Zena Cardman" class="astro-img">
+        </div>
+          <div class="info-item">
+            <span class="info-label">Michael Fincke</span>
+            <div class="line"></div>
+            <img src="./images/Fincke.webp" alt="Michael Fincke" class="astro-img">
+        </div>
+          <div class="info-item">
+            <span class="info-label">Kimiya Yui</span>
+            <div class="line"></div>
+            <img src="./images/Yui.webp" alt="Kimiya Yui" class="astro-img">
+        </div>
+          <div class="info-item">
+            <span class="info-label">Oleg Platonov</span>
+            <div class="line"></div>
+            <img src="./images/Platonov.webp" alt="Oleg Platonov" class="astro-img">
+        </div>
+    </div>
+</body>
+</html>
