@@ -370,7 +370,6 @@ div.spinner div.bar12 {
 
         .astro-panel h2 {
             color: #00ff88;
-            margin-bottom: 15px;
             font-size: 15px;
             font-weight: 900;
             text-transform: uppercase;
@@ -378,7 +377,7 @@ div.spinner div.bar12 {
 
         .title {
             border: 2px solid #00ff88;
-            padding:15px;
+            padding:10px;
             border-radius: 8px;
             display: flex;
             justify-content: space-between;
@@ -410,11 +409,15 @@ div.spinner div.bar12 {
     height:50px;
     width:50px;
     border-radius:50%;
-    transition: transform 300ms ease-in-out;
+   transition: transform 300ms ease-in-out, box-shadow 300ms ease-in-out, opacity 300ms ease-in-out;
+   opacity:0.8;
 }
 
 .astro-img:hover {
-    transform: translateY(-2px) scale(1.05);
+    transform: translateY(-2px) scale(1.25);
+    -webkit-box-shadow: 0px 2px 0px 18px #00ff88;
+    box-shadow: 0px 0px 0px 2px #00ff88;
+    opacity:1;
 }
 
 
@@ -503,7 +506,7 @@ div.spinner div.bar12 {
       <div class="astro-panel">
         <div class="title">
             <h2>Current Astronauts</h2>
-        <img src="./images/cute-astronaut-peace-hand-cartoon-vector-icon-illustration-science-technology-icon-isolated-flat.png" alt="astronaut svg" class="astro-svg">
+            <svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="36px" fill="#00ff88"><path d="m226-559 78 33q14-28 29-54t33-52l-56-11-84 84Zm142 83 114 113q42-16 90-49t90-75q70-70 109.5-155.5T806-800q-72-5-158 34.5T492-656q-42 42-75 90t-49 90Zm178-65q-23-23-23-56.5t23-56.5q23-23 57-23t57 23q23 23 23 56.5T660-541q-23 23-57 23t-57-23Zm19 321 84-84-11-56q-26 18-52 32.5T532-299l33 79Zm313-653q19 121-23.5 235.5T708-419l20 99q4 20-2 39t-20 33L538-80l-84-197-171-171-197-84 167-168q14-14 33.5-20t39.5-2l99 20q104-104 218-147t235-24ZM157-321q35-35 85.5-35.5T328-322q35 35 34.5 85.5T327-151q-25 25-83.5 43T82-76q14-103 32-161.5t43-83.5Zm57 56q-10 10-20 36.5T180-175q27-4 53.5-13.5T270-208q12-12 13-29t-11-29q-12-12-29-11.5T214-265Z"/></svg>
         </div>
         <div class="info-item">
             <span class="info-label">Zena Cardman</span>
@@ -666,7 +669,7 @@ div.spinner div.bar12 {
             const scene = new ThreeJS.Scene();
 
             // Lighting setup
-            var ambientLight = new ThreeJS.AmbientLight(0x404040, 0.25); // Increased ambient for softer shadows
+            var ambientLight = new ThreeJS.AmbientLight(0x404040, 0.4); // Increased from 0.25 to 0.4 for brighter night side
             scene.add(ambientLight);
 
             // Global variables for user location
@@ -793,7 +796,7 @@ div.spinner div.bar12 {
             scene.add(sunLight);
 
             // Add subtle moonlight/starlight for the night side
-            var nightLight = new ThreeJS.AmbientLight(0x2a2a3e, 0.15);
+            var nightLight = new ThreeJS.AmbientLight(0x2a2a3e, 0.25); // Increased from 0.15 to 0.25
             scene.add(nightLight);
 
             // Sun representation
@@ -839,6 +842,7 @@ div.spinner div.bar12 {
             const earthBump = textureLoader.load('./images/elev_bump_16k.jpg');
             const earthSpec = textureLoader.load('./images/2k_earth_specular_map (1).jpg');
             const earthAtmosphere = textureLoader.load('./images/2k_earth_clouds.jpg');
+            const earthNightTexture = textureLoader.load('./images/8k_earth_nightmap.jpg'); // Added night texture
             const starGlobe = textureLoader.load('./images/8k_stars_milky_way.jpg');
 
             // Starfield background - Multiple options available
@@ -888,12 +892,15 @@ div.spinner div.bar12 {
             // Earth
             var mySphere = new ThreeJS.Mesh(
                 new ThreeJS.SphereGeometry(20, 100, 100),
-                new ThreeJS.MeshPhongMaterial({
+                new ThreeJS.MeshStandardMaterial({
                     map: earthTexture,
                     bumpMap: earthBump,
                     bumpScale: 0.8,
-                    specularMap: earthSpec,
-                    shininess: 100,
+                    metalnessMap: earthSpec,
+                    metalness: 0.1,
+                    roughness: 0.7,
+                    emissiveMap: earthNightTexture, // City lights on night side
+                    emissive: new ThreeJS.Color(0x444444), // Subtle emission color
                     transparent: false,
                 })
             );
@@ -907,7 +914,7 @@ div.spinner div.bar12 {
                 new ThreeJS.MeshBasicMaterial({
                     map: earthAtmosphere,
                     transparent: true,
-                    opacity: 0.3,
+                    opacity: 0.2,
                     blending: ThreeJS.AdditiveBlending
                 })
             );
