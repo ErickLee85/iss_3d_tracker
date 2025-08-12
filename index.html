@@ -218,7 +218,7 @@
 
         .metrics-image {
             bottom:25px;
-            left: 130px;
+            left: 20px;
             height:80px;
             width:80px;
             position: fixed;
@@ -233,7 +233,7 @@
 
         .astro-svg-bottom{
             bottom:15px;
-            left: 220px;
+            left: 100px;
             height:120px;
             width:120px;
             position: fixed;
@@ -530,7 +530,7 @@ div.spinner div.bar12 {
         </div>
     </div>
 
-    <img onclick="loadNasaPage()" src="./images/NASA_logo.svg.png" alt="Nasa Logo" class="nasa-image">
+    <!-- <img onclick="loadNasaPage()" src="./images/NASA_logo.svg.png" alt="Nasa Logo" class="nasa-image"> -->
     <img onclick="toggleMetrics()" src="./images/metrics.png" alt="Metrics" class="metrics-image">
     <img onclick="showNasaAstros()" src="./images/cute-astronaut-peace-hand-cartoon-vector-icon-illustration-science-technology-icon-isolated-flat.png" alt="Cute Astronaut" class="astro-svg-bottom">
 
@@ -1175,11 +1175,6 @@ div.spinner div.bar12 {
                 // If astro panel is showing, hide it and show info panel
                 astroPanel.classList.remove('show');
                 astroPanel.classList.add('hide');
-                
-                setTimeout(() => {
-                    infoPanel.classList.remove('hide');
-                    infoPanel.classList.add('show');
-                }, 250);
                 
             } else {
                 // Neither panel is showing, just show astro panel
