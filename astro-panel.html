@@ -48,6 +48,7 @@
             font-weight: 800;
             font-size:1.2rem;
             padding:5px;
+            transition: color 300ms ease-in-out;
         }
 
         .info-item{
@@ -62,6 +63,7 @@
              border-bottom: 1px dashed rgb(255, 255, 255);
              margin-top: 10px;
              margin-inline: 10px;
+             transition: border-bottom-color 300ms ease-in-out;
         }
         .astro-img {
     height:50px;
@@ -114,5 +116,44 @@
             <img src="./images/Platonov.webp" alt="Oleg Platonov" class="astro-img">
         </div>
     </div>
+     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const astroAvatars = document.querySelectorAll('.astro-img'); // Use querySelectorAll to get all elements
+            
+            astroAvatars.forEach((avatar) => {
+                avatar.addEventListener('mouseenter', (event) => {
+                    console.log('Mouse entered astro avatar:', event.target.alt);
+                    
+                    // Find the line element that's in the same info-item as this avatar
+                    const parentItem = event.target.closest('.info-item');
+                    const lineElement = parentItem.querySelector('.line');
+                    const astroName = parentItem.querySelector('.info-label')
+
+                    // Change the line color to green
+                    if (lineElement && astroName) {
+                        lineElement.style.borderBottomColor = '#00ff88';
+                        astroName.style.color = '#00ff88'; 
+
+                    }
+                });
+                
+                avatar.addEventListener('mouseleave', (event) => {
+                    console.log('Mouse left astro avatar:', event.target.alt);
+                    
+                    // Find the line element that's in the same info-item as this avatar
+                    const parentItem = event.target.closest('.info-item');
+                    const lineElement = parentItem.querySelector('.line');
+                    const astroName = parentItem.querySelector('.info-label')
+                    
+                    // Change the line color back to white
+                    if (lineElement && astroName) {
+                        lineElement.style.borderBottomColor = 'rgb(255, 255, 255)';
+                        astroName.style.color = 'rgb(255, 255, 255)';
+
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
